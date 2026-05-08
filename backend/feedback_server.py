@@ -24,19 +24,25 @@ supabase = create_client(
 
 app = FastAPI()
 
-
 def append_feedback(
     user_id: str,
     paper_id: str,
     rating: str
 ):
-    supabase.table("feedback_logs").insert({
+    print("SUPABASE_URL exists:", bool(SUPABASE_URL))
+    print(
+        "SUPABASE_SERVICE_ROLE_KEY exists:",
+        bool(SUPABASE_SERVICE_ROLE_KEY)
+    )
+
+    result = supabase.table("feedback_logs").insert({
         "user_id": user_id,
         "paper_id": paper_id,
         "rating": rating,
         "created_at": datetime.now().isoformat()
     }).execute()
 
+    print("SUPABASE INSERT RESULT:", result)
 
 @app.get("/")
 def home():
