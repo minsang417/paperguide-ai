@@ -15,6 +15,10 @@ FEEDBACK_SECRET_KEY = os.getenv(
     "FEEDBACK_SECRET_KEY"
 )
 
+FEEDBACK_SERVER_URL = os.getenv(
+    "FEEDBACK_SERVER_URL"
+)
+
 EXTRACTOR_MODE = "rule"   # "rule" or "ai"
 USE_REAL_AI = True
 SHOW_MOCK_COMPARISON = True

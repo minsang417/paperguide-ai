@@ -7,14 +7,35 @@ from config import (
     SMTP_PORT,
     SENDER_NAME,
     SENDER_EMAIL,
-    SENDER_APP_PASSWORD
+    SENDER_APP_PASSWORD,
+    FEEDBACK_SERVER_URL
+)
+
+from backend.token_utils import (
+    create_feedback_token
 )
 
 
-def build_paper_card(item):
+def build_paper_card(item, user_id):
     insight = item.get("insight", {})
 
     url = item.get("url", "#")
+
+    token = create_feedback_token(
+        user_id,
+        item["paper_id"]
+    )
+
+    like_url = (
+        f"{FEEDBACK_SERVER_URL}/feedback"
+        f"?token={token}&rating=like"
+    )
+
+    dislike_url = (
+        f"{FEEDBACK_SERVER_URL}/feedback"
+        f"?token={token}&rating=dislike"
+    )
+
 
     return f"""
     <div style="
@@ -64,17 +85,44 @@ def build_paper_card(item):
                 font-size:15px;
                 font-weight:bold;
                 display:inline-block;
+                margin-right:8px;
             ">
                 논문 보기
+            </a>
+
+            <a href="{like_url}" style="
+                background:#16a34a;
+                color:white;
+                text-decoration:none;
+                padding:12px 18px;
+                border-radius:10px;
+                font-size:15px;
+                font-weight:bold;
+                display:inline-block;
+                margin-right:8px;
+            ">
+                좋아요
+            </a>
+
+            <a href="{dislike_url}" style="
+                background:#dc2626;
+                color:white;
+                text-decoration:none;
+                padding:12px 18px;
+                border-radius:10px;
+                font-size:15px;
+                font-weight:bold;
+                display:inline-block;
+            ">
+                별로예요
             </a>
         </div>
     </div>
     """
 
-
-def build_section(title, items):
+def build_section(title, items, user_id):
     cards = "".join(
-        build_paper_card(item)
+        build_paper_card(item, user_id)
         for item in items
     )
 
@@ -91,16 +139,19 @@ def build_section(title, items):
     </div>
     """
 
-
 def build_html_email(recommendation_data):
+    user_id = recommendation_data["user_id"]
+
     highly = build_section(
         "관심사와 높은 관련성이 있는 논문",
-        recommendation_data["highly_relevant"]
+        recommendation_data["highly_relevant"],
+        user_id
     )
 
     explore = build_section(
         "새롭게 탐색해볼 만한 논문",
-        recommendation_data["explore_nearby_topics"]
+        recommendation_data["explore_nearby_topics"],
+        user_id
     )
 
     return f"""
@@ -142,6 +193,15 @@ def build_html_email(recommendation_data):
             {highly}
             {explore}
 
+            <p style="
+                color:#6b7280;
+                font-size:13px;
+                line-height:1.6;
+                text-align:center;
+                margin-top:40px;
+            ">
+                좋아요/별로예요 버튼을 누르면 다음 추천 품질 개선에 반영됩니다.
+            </p>
         </div>
     </body>
     </html>
