@@ -1,20 +1,25 @@
 import os
 from datetime import datetime
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+from supabase import create_client
 
 from backend.token_utils import (
     verify_feedback_token
 )
 
-from utils.file_io import (
-    load_json,
-    save_json
+load_dotenv()
+
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv(
+    "SUPABASE_SERVICE_ROLE_KEY"
 )
 
-FEEDBACK_LOG_PATH = (
-    "data/feedback_log.json"
+supabase = create_client(
+    SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY
 )
 
 app = FastAPI()
@@ -25,24 +30,42 @@ def append_feedback(
     paper_id: str,
     rating: str
 ):
-    feedback = load_json(
-        FEEDBACK_LOG_PATH
-    )
-
-    if not isinstance(feedback, list):
-        feedback = []
-
-    feedback.append({
+    supabase.table("feedback_logs").insert({
         "user_id": user_id,
         "paper_id": paper_id,
         "rating": rating,
-        "timestamp": datetime.now().isoformat()
-    })
+        "created_at": datetime.now().isoformat()
+    }).execute()
 
-    save_json(
-        FEEDBACK_LOG_PATH,
-        feedback
-    )
+
+@app.get("/")
+def home():
+    return HTMLResponse("""
+    <html>
+        <body style="
+            font-family: Arial;
+            text-align: center;
+            padding-top: 80px;
+            background: #f3f4f6;
+        ">
+            <div style="
+                max-width: 600px;
+                margin: auto;
+                background: white;
+                padding: 40px;
+                border-radius: 20px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            ">
+                <h1 style="color:#2563eb;">
+                    PaperGuide AI Feedback Server
+                </h1>
+                <p style="font-size:18px;">
+                    서버가 정상적으로 실행 중입니다.
+                </p>
+            </div>
+        </body>
+    </html>
+    """)
 
 
 @app.get("/feedback")
