@@ -67,6 +67,8 @@ from delivery.email_sender import (
     send_weekly_report_email
 )
 
+from users.feedback_sync import sync_feedback_to_user_weights
+
 PAPER_PATH = "data/papers/processed_papers.json"
 RAW_PAPER_PATH = "data/papers/raw_papers.json"
 USERS_PATH = "data/users/users.json"
@@ -281,6 +283,8 @@ def ensure_insight_for_paper(
 
 def main():
     print("main started")
+
+    sync_feedback_to_user_weights()
 
     users = get_all_users()
 

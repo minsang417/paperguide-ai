@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from supabase import create_client
+from datetime import datetime, timezone
 
 from backend.token_utils import (
     verify_feedback_token
@@ -29,20 +30,34 @@ def append_feedback(
     paper_id: str,
     rating: str
 ):
-    print("SUPABASE_URL exists:", bool(SUPABASE_URL))
+    print("=== APPEND FEEDBACK CALLED ===", flush=True)
+    print("user_id:", user_id, flush=True)
+    print("paper_id:", paper_id, flush=True)
+    print("rating:", rating, flush=True)
+    print("SUPABASE_URL exists:", bool(SUPABASE_URL), flush=True)
     print(
         "SUPABASE_SERVICE_ROLE_KEY exists:",
-        bool(SUPABASE_SERVICE_ROLE_KEY)
+        bool(SUPABASE_SERVICE_ROLE_KEY),
+        flush=True
     )
 
-    result = supabase.table("feedback_logs").insert({
-        "user_id": user_id,
-        "paper_id": paper_id,
-        "rating": rating,
-        "created_at": datetime.now().isoformat()
-    }).execute()
+    try:
+        result = supabase.table("feedback_logs").upsert(
+            {
+                "user_id": user_id,
+                "paper_id": paper_id,
+                "rating": rating,
+                "processed": False,
+                "created_at": datetime.now().isoformat(),
+            },
+            on_conflict="user_id,paper_id",
+        ).execute()
 
-    print("SUPABASE INSERT RESULT:", result)
+        print("SUPABASE INSERT RESULT:", result, flush=True)
+
+    except Exception as e:
+        print("SUPABASE INSERT ERROR:", repr(e), flush=True)
+        raise
 
 @app.get("/")
 def home():
