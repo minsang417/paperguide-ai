@@ -1,6 +1,7 @@
-from utils.file_io import load_json, save_json
-
-USERS_PATH = "data/users/users.json"
+from users.data_store import (
+    get_user,
+    update_keyword_weights
+)
 
 
 def apply_feedback_to_user(
@@ -9,14 +10,7 @@ def apply_feedback_to_user(
     liked: bool = True
 ):
 
-    users = load_json(USERS_PATH)
-
-    target_user = None
-
-    for user in users:
-        if user.get("user_id") == user_id:
-            target_user = user
-            break
+    target_user = get_user(user_id)
 
     if target_user is None:
         print(f"user not found: {user_id}")
@@ -65,13 +59,9 @@ def apply_feedback_to_user(
 
         keyword_weights[keyword] = new_weight
 
-    target_user["keyword_weights"] = (
+    update_keyword_weights(
+        user_id,
         keyword_weights
-    )
-
-    save_json(
-        USERS_PATH,
-        users
     )
 
     print(

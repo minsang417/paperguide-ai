@@ -3,6 +3,7 @@ from datetime import datetime
 
 from utils.file_io import save_json
 
+from recommender.recommendation_store import save_recommendation_log
 
 def get_user_recommendation_dir(user_id: str) -> str:
     path = f"data/recommendations/{user_id}"
@@ -76,6 +77,8 @@ def save_weekly_recommendations(
         f"{user_dir}/weekly_recommendations.json",
         data
     )
+
+    save_recommendation_log(data)
 
     return data
 

@@ -54,10 +54,6 @@ from recommender.insight_generator import (
     generate_easy_insight
 )
 
-from users.weight_updater import (
-    apply_feedback_to_user
-)
-
 from utils.file_io import (
     save_or_update_paper,
     load_json
@@ -68,22 +64,14 @@ from delivery.email_sender import (
 )
 
 from users.feedback_sync import sync_feedback_to_user_weights
+from users.data_store import get_all_users
+
 
 PAPER_PATH = "data/papers/processed_papers.json"
 RAW_PAPER_PATH = "data/papers/raw_papers.json"
-USERS_PATH = "data/users/users.json"
 
 CORE_RECOMMENDATION_COUNT = 3
 EXPLORATION_RECOMMENDATION_COUNT = 2
-
-
-def get_all_users():
-    users = load_json(USERS_PATH)
-
-    if not isinstance(users, list):
-        return []
-
-    return users
 
 
 def get_processed_paper_map():
@@ -100,7 +88,6 @@ def get_processed_paper_map():
 
 
 def process_new_paper(paper):
-
     raw_keywords = extract_keywords(
         paper["title"],
         paper["abstract"]
@@ -146,7 +133,6 @@ def process_new_paper(paper):
     )
 
     for kw in pending_candidates:
-
         similar_candidates = (
             find_similar_canonical_keywords(kw)
         )
@@ -307,7 +293,6 @@ def main():
     processed_by_id = {}
 
     for paper in raw_papers:
-
         existing_processed = processed_paper_map.get(
             paper["paper_id"]
         )
@@ -327,13 +312,11 @@ def main():
     all_selected_paper_ids = set()
 
     for user in users:
-
         print(f"\n=== USER {user['user_id']} ===")
 
         paper_scores = []
 
         for paper in processed_papers:
-
             item = build_paper_score_item(
                 paper,
                 user
@@ -360,7 +343,6 @@ def main():
     )
 
     for paper_id in all_selected_paper_ids:
-
         paper = processed_by_id.get(paper_id)
 
         if not paper:
@@ -371,12 +353,10 @@ def main():
         processed_by_id[paper_id] = paper
 
     for user_id, data in user_score_map.items():
-
         user = data["user"]
         refreshed_scores = []
 
         for item in data["paper_scores"]:
-
             paper = processed_by_id.get(
                 item["paper_id"]
             )
@@ -410,7 +390,6 @@ def main():
             )
 
         if ENABLE_FEEDBACK:
-
             print(
                 "feedback is enabled, but batch feedback "
                 "is not implemented in multi-user mode."
