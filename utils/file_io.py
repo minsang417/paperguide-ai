@@ -1,40 +1,85 @@
 import json
-from pathlib import Path
+import os
+
+from utils.json_db_store import (
+    load_json_document,
+    save_json_document
+)
 
 
-def load_json(path: str):
-    file_path = Path(path)
+def should_use_db(path: str):
+    normalized_path = path.replace("\\", "/")
 
-    if not file_path.exists():
-        if path.endswith(".json"):
-            if "synonym_map" in path:
-                return {}
+    return normalized_path.startswith("data/")
+
+
+def load_json(path):
+    if should_use_db(path):
+        default = [] if path.endswith(".json") else None
+        data = load_json_document(path, default=default)
+
+        if data is None:
             return []
+
+        return data
+
+    if not os.path.exists(path):
         return []
 
-    with open(file_path, "r", encoding="utf-8") as f:
+    with open(
+        path,
+        "r",
+        encoding="utf-8"
+    ) as f:
         return json.load(f)
 
 
-def save_json(path: str, data) -> None:
-    file_path = Path(path)
-    file_path.parent.mkdir(parents=True, exist_ok=True)
+def save_json(path, data):
+    if should_use_db(path):
+        save_json_document(path, data)
+        return
 
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    folder = os.path.dirname(path)
+
+    if folder:
+        os.makedirs(
+            folder,
+            exist_ok=True
+        )
+
+    with open(
+        path,
+        "w",
+        encoding="utf-8"
+    ) as f:
+        json.dump(
+            data,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
 
 
-def save_or_update_paper(path: str, paper: dict) -> None:
+def save_or_update_paper(path, paper):
     papers = load_json(path)
 
+    if not isinstance(papers, list):
+        papers = []
+
+    paper_id = paper.get("paper_id")
+
     updated = False
-    for i, existing_paper in enumerate(papers):
-        if existing_paper.get("paper_id") == paper.get("paper_id"):
-            papers[i] = paper
+
+    for index, existing_paper in enumerate(papers):
+        if existing_paper.get("paper_id") == paper_id:
+            papers[index] = paper
             updated = True
             break
 
     if not updated:
         papers.append(paper)
 
-    save_json(path, papers)
+    save_json(
+        path,
+        papers
+    )

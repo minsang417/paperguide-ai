@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from supabase import create_client
+from recommender.paper_store import get_processed_paper_map 
+
 
 from backend.token_utils import (
     verify_feedback_token

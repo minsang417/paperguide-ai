@@ -4,6 +4,12 @@ from users.data_store import (
 )
 
 
+MIN_WEIGHT = 0.0
+MAX_WEIGHT = 3.0
+DEFAULT_WEIGHT = 0.1
+BASE_DELTA = 0.5
+
+
 def apply_feedback_to_user(
     user_id: str,
     paper: dict,
@@ -31,7 +37,10 @@ def apply_feedback_to_user(
     ):
 
         current_weight = float(
-            keyword_weights.get(keyword, 0.1)
+            keyword_weights.get(
+                keyword,
+                DEFAULT_WEIGHT
+            )
         )
 
         keyword_count = max(
@@ -41,7 +50,7 @@ def apply_feedback_to_user(
 
         adjustment_scale = 1 / keyword_count
 
-        base_delta = 0.5 * adjustment_scale
+        base_delta = BASE_DELTA * adjustment_scale
 
         if liked:
             delta = base_delta
@@ -52,9 +61,12 @@ def apply_feedback_to_user(
             delta * paper_weight
         )
 
-        new_weight = max(
-            0.0,
-            round(new_weight, 4)
+        new_weight = min(
+            MAX_WEIGHT,
+            max(
+                MIN_WEIGHT,
+                round(new_weight, 4)
+            )
         )
 
         keyword_weights[keyword] = new_weight

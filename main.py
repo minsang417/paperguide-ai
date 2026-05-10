@@ -63,6 +63,11 @@ from delivery.email_sender import (
     send_weekly_report_email
 )
 
+from recommender.paper_store import (
+    get_processed_paper_map,
+    save_or_update_processed_paper
+)
+
 from users.feedback_sync import sync_feedback_to_user_weights
 from users.data_store import get_all_users
 
@@ -72,19 +77,6 @@ RAW_PAPER_PATH = "data/papers/raw_papers.json"
 
 CORE_RECOMMENDATION_COUNT = 3
 EXPLORATION_RECOMMENDATION_COUNT = 2
-
-
-def get_processed_paper_map():
-    processed_papers = load_json(PAPER_PATH)
-
-    if not isinstance(processed_papers, list):
-        return {}
-
-    return {
-        paper["paper_id"]: paper
-        for paper in processed_papers
-        if "paper_id" in paper
-    }
 
 
 def process_new_paper(paper):
@@ -162,10 +154,7 @@ def process_new_paper(paper):
                 mock_result
             )
 
-    save_or_update_paper(
-        PAPER_PATH,
-        paper
-    )
+    save_or_update_processed_paper(paper)
 
     return paper
 
@@ -247,10 +236,7 @@ def ensure_insight_for_paper(
                 "이 논문의 초록이나 전문을 확인할 수 있을까요?"
         }
 
-        save_or_update_paper(
-            PAPER_PATH,
-            paper
-        )
+        save_or_update_processed_paper(paper)
 
         return paper
 
@@ -259,10 +245,7 @@ def ensure_insight_for_paper(
         abstract
     )
 
-    save_or_update_paper(
-        PAPER_PATH,
-        paper
-    )
+    save_or_update_processed_paper(paper)
 
     return paper
 
