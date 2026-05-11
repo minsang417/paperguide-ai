@@ -36,6 +36,13 @@ from backend.token_utils import (
     verify_unsubscribe_token
 )
 
+from users.data_store import (
+    email_exists,
+    create_user,
+    deactivate_user,
+    update_delivery_frequency
+)
+
 
 load_dotenv()
 
@@ -221,11 +228,12 @@ def signup_page():
                 box-shadow: 0 4px 16px rgba(0,0,0,0.08);
             ">
                 <h1 style="color:#2563eb;">
-                    PaperGuide AI 가입
+                    PaperGuide AI 가입 / 설정 변경
                 </h1>
 
                 <p style="line-height:1.6;">
-                    관심 분야를 선택하면 매주 관련 논문을 쉽게 설명해서 보내드립니다.
+                    관심 분야를 선택하면 매주 또는 매일 관련 논문을 쉽게 설명해서 보내드립니다.
+                    이미 가입한 이메일을 입력하면 추천 메일 주기만 변경됩니다.
                 </p>
 
                 <form method="post" action="/signup">
@@ -257,6 +265,18 @@ def signup_page():
                         margin:8px 0 24px;
                     ">
 
+                    <h3>추천 메일 주기</h3>
+
+                    <label style="display:block; margin:10px 0;">
+                        <input type="radio" name="delivery_frequency" value="weekly" checked>
+                        주 1회 추천 받기
+                    </label>
+
+                    <label style="display:block; margin:10px 0 24px;">
+                        <input type="radio" name="delivery_frequency" value="daily">
+                        매일 추천 받기
+                    </label>
+
                     <button type="submit" style="
                         background:#2563eb;
                         color:white;
@@ -266,7 +286,7 @@ def signup_page():
                         font-size:16px;
                         cursor:pointer;
                     ">
-                        가입하기
+                        가입 또는 설정 변경
                     </button>
                 </form>
             </div>
@@ -274,33 +294,74 @@ def signup_page():
     </html>
     """)
 
-
 @app.post("/signup")
 def signup_submit(
     name: str = Form(...),
     email: str = Form(...),
     selected_keywords: list[str] = Form(default=[]),
-    custom_interests: str = Form(default="")
+    custom_interests: str = Form(default=""),
+    delivery_frequency: str = Form(default="weekly")
 ):
     print("SIGNUP POST RECEIVED", flush=True)
     print("name:", repr(name), flush=True)
     print("email:", repr(email), flush=True)
     print("selected_keywords:", selected_keywords, flush=True)
     print("custom_interests:", repr(custom_interests), flush=True)
+    print("delivery_frequency:", repr(delivery_frequency), flush=True)
 
     email = email.strip().lower()
     name = name.strip()
 
-    if email_exists(email):
-        print("DUPLICATE EMAIL:", email, flush=True)
+    if delivery_frequency not in [
+        "weekly",
+        "daily"
+    ]:
+        delivery_frequency = "weekly"
 
-        return HTMLResponse(
-            """
-            <h1>이미 가입된 이메일입니다.</h1>
-            <p>이미 PaperGuide AI 추천 대상에 등록되어 있습니다.</p>
-            """,
-            status_code=400
+    if email_exists(email):
+        update_delivery_frequency(
+            email=email,
+            frequency=delivery_frequency
         )
+
+        frequency_label = (
+            "매일"
+            if delivery_frequency == "daily"
+            else "주 1회"
+        )
+
+        return HTMLResponse(f"""
+        <html>
+            <body style="
+                font-family: Arial;
+                text-align: center;
+                padding-top: 80px;
+                background: #f3f4f6;
+            ">
+                <div style="
+                    max-width: 600px;
+                    margin: auto;
+                    background: white;
+                    padding: 40px;
+                    border-radius: 20px;
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+                ">
+                    <h1 style="color:#2563eb;">
+                        추천 주기 변경 완료
+                    </h1>
+
+                    <p style="
+                        font-size:18px;
+                        line-height:1.6;
+                    ">
+                        앞으로 추천 메일은
+                        <b>{frequency_label}</b>
+                        발송됩니다.
+                    </p>
+                </div>
+            </body>
+        </html>
+        """)
 
     user_id = f"user_{uuid4().hex[:12]}"
 
@@ -313,7 +374,8 @@ def signup_submit(
         user_id=user_id,
         name=name,
         email=email,
-        keyword_weights=keyword_weights
+        keyword_weights=keyword_weights,
+        delivery_frequency=delivery_frequency
     )
 
     print("USER CREATED:", user_id, flush=True)
@@ -355,6 +417,12 @@ def signup_submit(
         </li>
         """
 
+    frequency_label = (
+        "매일"
+        if delivery_frequency == "daily"
+        else "주 1회"
+    )
+
     return HTMLResponse(f"""
     <html>
         <body style="
@@ -384,6 +452,15 @@ def signup_submit(
                     다음 추천 메일 발송 때부터 PaperGuide AI가 관심 분야에 맞는 논문을 보내드립니다.
                 </p>
 
+                <p style="
+                    font-size:16px;
+                    line-height:1.6;
+                    text-align:center;
+                ">
+                    추천 메일 주기:
+                    <b>{frequency_label}</b>
+                </p>
+
                 <h3>반영된 관심사</h3>
 
                 <ul style="line-height:1.8;">
@@ -393,6 +470,7 @@ def signup_submit(
         </body>
     </html>
     """)
+
 
 @app.get("/feedback")
 def feedback(

@@ -78,7 +78,8 @@ def create_user(
     user_id: str,
     name: str,
     email: str,
-    keyword_weights: dict
+    keyword_weights: dict,
+    delivery_frequency: str = "weekly"
 ):
     result = (
         supabase.table("users")
@@ -88,13 +89,12 @@ def create_user(
             "email": email,
             "keyword_weights": keyword_weights,
             "is_active": True,
-            "delivery_frequency": "weekly"
+            "delivery_frequency": delivery_frequency
         })
         .execute()
     )
 
     return result.data
-
 
 def deactivate_user(user_id: str):
     result = (
@@ -118,3 +118,18 @@ def get_users_by_delivery_frequency(frequency: str):
     )
 
     return result.data or []
+
+def update_delivery_frequency(
+    email: str,
+    frequency: str
+):
+    result = (
+        supabase.table("users")
+        .update({
+            "delivery_frequency": frequency
+        })
+        .eq("email", email)
+        .execute()
+    )
+
+    return result.data
