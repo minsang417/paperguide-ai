@@ -1,3 +1,5 @@
+import argparse
+
 from config import (
     SHOW_MOCK_COMPARISON,
     ENABLE_FEEDBACK,
@@ -54,6 +56,11 @@ from recommender.insight_generator import (
     generate_easy_insight
 )
 
+from recommender.paper_store import (
+    get_processed_paper_map,
+    save_or_update_processed_paper
+)
+
 from utils.file_io import (
     save_or_update_paper,
     load_json
@@ -63,13 +70,13 @@ from delivery.email_sender import (
     send_weekly_report_email
 )
 
-from recommender.paper_store import (
-    get_processed_paper_map,
-    save_or_update_processed_paper
+from users.feedback_sync import (
+    sync_feedback_to_user_weights
 )
 
-from users.feedback_sync import sync_feedback_to_user_weights
-from users.data_store import get_all_users
+from users.data_store import (
+    get_users_by_delivery_frequency
+)
 
 
 PAPER_PATH = "data/papers/processed_papers.json"
@@ -213,12 +220,15 @@ def get_selected_paper_ids(
     return selected_ids
 
 
-def ensure_insight_for_paper(paper):
+def ensure_insight_for_paper(
+    paper
+):
     if paper.get("insight"):
         print(f"reuse insight: {paper['paper_id']}")
         return paper
 
     print(f"generate insight: {paper['paper_id']}")
+
     abstract = paper.get("abstract", "")
 
     if not abstract:
@@ -250,15 +260,18 @@ def ensure_insight_for_paper(paper):
     return paper
 
 
-def main():
+def main(delivery_frequency="weekly"):
     print("main started")
+    print(f"delivery frequency: {delivery_frequency}")
 
     sync_feedback_to_user_weights()
 
-    users = get_all_users()
+    users = get_users_by_delivery_frequency(
+        delivery_frequency
+    )
 
     if not users:
-        print("no users found")
+        print(f"no {delivery_frequency} users found")
         return
 
     raw_papers = load_json(RAW_PAPER_PATH)
@@ -295,7 +308,10 @@ def main():
     all_selected_paper_ids = set()
 
     for user in users:
-        print(f"\n=== USER {user['user_id']} ===")
+        print(
+            f"\n=== USER {user.get('name')} "
+            f"<{user.get('email')}> ==="
+        )
 
         paper_scores = []
 
@@ -380,4 +396,19 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--frequency",
+        choices=[
+            "weekly",
+            "daily"
+        ],
+        default="weekly"
+    )
+
+    args = parser.parse_args()
+
+    main(
+        delivery_frequency=args.frequency
+    )

@@ -1,12 +1,12 @@
-name: Weekly PaperGuide Run
+name: Daily PaperGuide Digest
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 1"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
 
 jobs:
-  run-paperguide:
+  daily-digest:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,6 +25,5 @@ jobs:
           FEEDBACK_SERVER_URL: ${{ secrets.FEEDBACK_SERVER_URL }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: |
-          python main.py --frequency weekly
-          python scripts/cleanup_logs.py
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python main.py --frequency daily
