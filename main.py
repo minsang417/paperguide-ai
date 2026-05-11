@@ -321,7 +321,7 @@ def main():
         }
 
     print(
-        f"\nselected papers for insight: "
+        f"\nselected papers for recommendation: "
         f"{len(all_selected_paper_ids)}"
     )
 
