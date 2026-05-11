@@ -27,4 +27,4 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           python main.py --frequency weekly
-          python scripts/cleanup_logs.py
+          python python -m scripts.cleanup_logs
