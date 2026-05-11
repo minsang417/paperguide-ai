@@ -213,12 +213,12 @@ def get_selected_paper_ids(
     return selected_ids
 
 
-def ensure_insight_for_paper(
-    paper
-):
+def ensure_insight_for_paper(paper):
     if paper.get("insight"):
+        print(f"reuse insight: {paper['paper_id']}")
         return paper
 
+    print(f"generate insight: {paper['paper_id']}")
     abstract = paper.get("abstract", "")
 
     if not abstract:
