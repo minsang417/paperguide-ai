@@ -8,10 +8,6 @@ from config import (
     ENABLE_EMAIL_SENDING
 )
 
-from recommender.vector_utils import (
-    paper_weights_to_sparse_vector
-)
-
 from keywords.extractor import extract_keywords
 from keywords.normalizer import normalize_keywords
 from keywords.matcher import match_keywords
@@ -46,6 +42,10 @@ from recommender.paper_vectorizer import (
     build_paper_keyword_weights
 )
 
+from recommender.vector_utils import (
+    paper_weights_to_sparse_vector
+)
+
 from recommender.exploration_scorer import (
     calculate_exploration_score
 )
@@ -66,7 +66,6 @@ from recommender.paper_store import (
 )
 
 from utils.file_io import (
-    save_or_update_paper,
     load_json
 )
 
@@ -90,21 +89,15 @@ CORE_RECOMMENDATION_COUNT = 3
 EXPLORATION_RECOMMENDATION_COUNT = 2
 
 
-def process_new_paper(paper):
-    raw_keywords = extract_keywords(
-        paper["title"],
-        paper["abstract"]
-    )
-
+def apply_keyword_matching_to_paper(paper):
     normalized_keywords = normalize_keywords(
-        raw_keywords
+        paper["raw_keywords"]
     )
 
     match_result = match_keywords(
         normalized_keywords
     )
 
-    paper["raw_keywords"] = raw_keywords
     paper["normalized_keywords"] = normalized_keywords
     paper["matched_keyword_ids"] = (
         match_result["matched_keyword_ids"]
@@ -124,6 +117,19 @@ def process_new_paper(paper):
         paper["paper_keyword_weights"]
     )
 
+    return paper, match_result
+
+
+def process_new_paper(paper):
+    paper["raw_keywords"] = extract_keywords(
+        paper["title"],
+        paper["abstract"]
+    )
+
+    paper, match_result = apply_keyword_matching_to_paper(
+        paper
+    )
+
     update_candidate_keywords(
         match_result["candidate_keywords"],
         paper["paper_id"]
@@ -138,6 +144,8 @@ def process_new_paper(paper):
     pending_candidates = get_pending_candidates(
         filtered_candidates
     )
+
+    canonical_updated = False
 
     for kw in pending_candidates:
         similar_candidates = (
@@ -168,6 +176,13 @@ def process_new_paper(paper):
                 kw,
                 mock_result
             )
+
+        canonical_updated = True
+
+    if canonical_updated:
+        paper, _ = apply_keyword_matching_to_paper(
+            paper
+        )
 
     save_or_update_processed_paper(paper)
 
@@ -203,6 +218,10 @@ def build_paper_score_item(
         "paper_keyword_weights": paper.get(
             "paper_keyword_weights",
             {}
+        ),
+        "paper_vector": paper.get(
+            "paper_vector",
+            []
         ),
         "insight": paper.get("insight")
     }
@@ -301,10 +320,7 @@ def main(delivery_frequency="weekly"):
             paper["paper_id"]
         )
 
-        if (
-            existing_processed
-            and existing_processed.get("paper_keyword_weights")
-        ):
+        if existing_processed is not None:
             paper = existing_processed
         else:
             paper = process_new_paper(paper)

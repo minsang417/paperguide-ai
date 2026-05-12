@@ -32,10 +32,7 @@ def daily_ingest():
             paper_id
         )
 
-        if (
-            existing_processed
-            and existing_processed.get("paper_keyword_weights")
-        ):
+        if existing_processed is not None:
             continue
 
         candidate_papers.append(paper)
