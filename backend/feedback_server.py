@@ -12,28 +12,8 @@ from backend.token_utils import (
     verify_unsubscribe_token
 )
 
-from users.data_store import (
-    email_exists,
-    create_user,
-    deactivate_user
-)
-
-from backend.token_utils import (
-    verify_feedback_token
-)
-
-from users.data_store import (
-    email_exists,
-    create_user
-)
-
-from keywords.ai_interest_mapper import (
-    map_interest_to_canonical_keywords
-)
-
-from backend.token_utils import (
-    verify_feedback_token,
-    verify_unsubscribe_token
+from users.vector_utils import (
+    weights_dict_to_vector
 )
 
 from users.data_store import (
@@ -41,6 +21,10 @@ from users.data_store import (
     create_user,
     deactivate_user,
     update_delivery_frequency
+)
+
+from keywords.ai_interest_mapper import (
+    map_interest_to_canonical_keywords
 )
 
 
@@ -75,6 +59,7 @@ REPRESENTATIVE_KEYWORDS = [
 
 DEFAULT_WEIGHT = 0.1
 SELECTED_WEIGHT = 1.0
+
 
 def build_initial_keyword_weights(
     selected_keywords,
@@ -132,6 +117,7 @@ def build_initial_keyword_weights(
             })
 
     return keyword_weights, mapping_results
+
 
 def append_feedback(
     user_id: str,
@@ -294,6 +280,7 @@ def signup_page():
     </html>
     """)
 
+
 @app.post("/signup")
 def signup_submit(
     name: str = Form(...),
@@ -370,11 +357,16 @@ def signup_submit(
         custom_interests
     )
 
+    keyword_vector = weights_dict_to_vector(
+        keyword_weights
+    )
+
     create_user(
         user_id=user_id,
         name=name,
         email=email,
         keyword_weights=keyword_weights,
+        keyword_vector=keyword_vector,
         delivery_frequency=delivery_frequency
     )
 
@@ -533,6 +525,7 @@ def feedback(
         </body>
     </html>
     """)
+
 
 @app.get("/unsubscribe")
 def unsubscribe(token: str):

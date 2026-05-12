@@ -8,6 +8,10 @@ from config import (
     ENABLE_EMAIL_SENDING
 )
 
+from recommender.vector_utils import (
+    paper_weights_to_sparse_vector
+)
+
 from keywords.extractor import extract_keywords
 from keywords.normalizer import normalize_keywords
 from keywords.matcher import match_keywords
@@ -114,6 +118,10 @@ def process_new_paper(paper):
 
     paper["paper_keyword_weights"] = (
         build_paper_keyword_weights(paper)
+    )
+
+    paper["paper_vector"] = paper_weights_to_sparse_vector(
+        paper["paper_keyword_weights"]
     )
 
     update_candidate_keywords(

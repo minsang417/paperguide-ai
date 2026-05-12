@@ -1,6 +1,7 @@
 from config import MAX_PAPERS_TO_PROCESS
 
 from utils.file_io import load_json
+
 from main import (
     RAW_PAPER_PATH,
     get_processed_paper_map,
@@ -17,31 +18,59 @@ def daily_ingest():
         print("no raw papers found")
         return
 
-    if MAX_PAPERS_TO_PROCESS is not None:
-        raw_papers = raw_papers[:MAX_PAPERS_TO_PROCESS]
-
     processed_paper_map = get_processed_paper_map()
 
-    processed_count = 0
-    skipped_count = 0
+    candidate_papers = []
 
     for paper in raw_papers:
+        paper_id = paper.get("paper_id")
+
+        if not paper_id:
+            continue
+
         existing_processed = processed_paper_map.get(
-            paper["paper_id"]
+            paper_id
         )
 
         if (
             existing_processed
             and existing_processed.get("paper_keyword_weights")
         ):
-            skipped_count += 1
             continue
 
-        process_new_paper(paper)
-        processed_count += 1
+        candidate_papers.append(paper)
 
-    print(f"processed: {processed_count}")
-    print(f"skipped: {skipped_count}")
+    total_candidates = len(candidate_papers)
+
+    if MAX_PAPERS_TO_PROCESS is not None:
+        candidate_papers = candidate_papers[
+            :MAX_PAPERS_TO_PROCESS
+        ]
+
+    processed_count = 0
+    failed_count = 0
+
+    for paper in candidate_papers:
+        try:
+            process_new_paper(paper)
+            processed_count += 1
+
+        except Exception as e:
+            failed_count += 1
+
+            print(
+                f"[DAILY INGEST ERROR] "
+                f"paper_id={paper.get('paper_id')} "
+                f"error={repr(e)}"
+            )
+
+    skipped_count = len(raw_papers) - total_candidates
+
+    print(f"raw papers: {len(raw_papers)}")
+    print(f"unprocessed candidates: {total_candidates}")
+    print(f"processed this run: {processed_count}")
+    print(f"failed this run: {failed_count}")
+    print(f"already processed skipped: {skipped_count}")
 
 
 if __name__ == "__main__":

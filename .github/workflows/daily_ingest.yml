@@ -27,5 +27,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -m collectors.paper_collector
-          python -m scripts.daily_ingest
+          run: |
+            python -m collectors.paper_collector
+            python -m collectors.openalex_collector
+            python -m scripts.daily_ingest

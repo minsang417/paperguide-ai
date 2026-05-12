@@ -49,6 +49,7 @@ def save_or_update_processed_paper(paper: dict):
         "candidate_keywords": paper.get("candidate_keywords", []),
         "paper_keyword_weights": paper.get("paper_keyword_weights", {}),
         "insight": paper.get("insight"),
+        "paper_vector": paper.get("paper_vector"),
     }
 
     result = (

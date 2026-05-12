@@ -31,6 +31,18 @@ def get_all_users():
     return result.data or []
 
 
+def get_users_by_delivery_frequency(frequency: str):
+    result = (
+        supabase.table("users")
+        .select("*")
+        .eq("is_active", True)
+        .eq("delivery_frequency", frequency)
+        .execute()
+    )
+
+    return result.data or []
+
+
 def get_user(user_id: str):
     result = (
         supabase.table("users")
@@ -62,6 +74,40 @@ def update_keyword_weights(
     return result.data
 
 
+def update_keyword_vector(
+    user_id: str,
+    keyword_vector: list
+):
+    result = (
+        supabase.table("users")
+        .update({
+            "keyword_vector": keyword_vector
+        })
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return result.data
+
+
+def update_user_preferences(
+    user_id: str,
+    keyword_weights: dict,
+    keyword_vector: list
+):
+    result = (
+        supabase.table("users")
+        .update({
+            "keyword_weights": keyword_weights,
+            "keyword_vector": keyword_vector
+        })
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return result.data
+
+
 def email_exists(email: str):
     result = (
         supabase.table("users")
@@ -79,6 +125,7 @@ def create_user(
     name: str,
     email: str,
     keyword_weights: dict,
+    keyword_vector: list,
     delivery_frequency: str = "weekly"
 ):
     result = (
@@ -88,6 +135,7 @@ def create_user(
             "name": name,
             "email": email,
             "keyword_weights": keyword_weights,
+            "keyword_vector": keyword_vector,
             "is_active": True,
             "delivery_frequency": delivery_frequency
         })
@@ -95,6 +143,7 @@ def create_user(
     )
 
     return result.data
+
 
 def deactivate_user(user_id: str):
     result = (
@@ -108,16 +157,6 @@ def deactivate_user(user_id: str):
 
     return result.data
 
-def get_users_by_delivery_frequency(frequency: str):
-    result = (
-        supabase.table("users")
-        .select("*")
-        .eq("is_active", True)
-        .eq("delivery_frequency", frequency)
-        .execute()
-    )
-
-    return result.data or []
 
 def update_delivery_frequency(
     email: str,

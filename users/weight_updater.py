@@ -1,12 +1,23 @@
 from users.data_store import (
     get_user,
-    update_keyword_weights
+    update_user_preferences
+)
+
+from users.vector_utils import (
+    expand_vector,
+    vector_to_weights_dict,
+    set_user_keyword_weight,
+    NEUTRAL_WEIGHT
+)
+
+from keywords.vector_index import (
+    get_vector_size
 )
 
 
 MIN_WEIGHT = 0.0
 MAX_WEIGHT = 3.0
-DEFAULT_WEIGHT = 0.1
+DEFAULT_WEIGHT = NEUTRAL_WEIGHT
 BASE_DELTA = 0.5
 
 
@@ -22,15 +33,29 @@ def apply_feedback_to_user(
         print(f"user not found: {user_id}")
         return
 
-    keyword_weights = target_user.get(
-        "keyword_weights",
-        {}
+    keyword_vector = expand_vector(
+        target_user.get("keyword_vector"),
+        get_vector_size(),
+        neutral_weight=DEFAULT_WEIGHT
+    )
+
+    keyword_weights = vector_to_weights_dict(
+        keyword_vector,
+        neutral_weight=DEFAULT_WEIGHT
     )
 
     paper_keyword_weights = paper.get(
         "paper_keyword_weights",
         {}
     )
+
+    keyword_count = max(
+        1,
+        len(paper_keyword_weights)
+    )
+
+    adjustment_scale = 1 / keyword_count
+    base_delta = BASE_DELTA * adjustment_scale
 
     for keyword, paper_weight in (
         paper_keyword_weights.items()
@@ -43,22 +68,13 @@ def apply_feedback_to_user(
             )
         )
 
-        keyword_count = max(
-            1,
-            len(paper_keyword_weights)
-        )
-
-        adjustment_scale = 1 / keyword_count
-
-        base_delta = BASE_DELTA * adjustment_scale
-
         if liked:
             delta = base_delta
         else:
             delta = -base_delta
 
         new_weight = current_weight + (
-            delta * paper_weight
+            delta * float(paper_weight)
         )
 
         new_weight = min(
@@ -71,12 +87,20 @@ def apply_feedback_to_user(
 
         keyword_weights[keyword] = new_weight
 
-    update_keyword_weights(
+        keyword_vector = set_user_keyword_weight(
+            keyword_vector,
+            keyword,
+            new_weight,
+            neutral_weight=DEFAULT_WEIGHT
+        )
+
+    update_user_preferences(
         user_id,
-        keyword_weights
+        keyword_weights,
+        keyword_vector
     )
 
     print(
-        f"updated keyword weights "
+        f"updated keyword vector "
         f"for {user_id}"
     )
