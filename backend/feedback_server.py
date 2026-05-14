@@ -43,19 +43,126 @@ supabase = create_client(
 app = FastAPI()
 
 
-REPRESENTATIVE_KEYWORDS = [
-    "cancer",
-    "immunotherapy",
-    "genetics",
-    "aging",
-    "neuroscience",
-    "protein",
-    "cell",
-    "inflammation",
-    "machine_learning",
-    "physics",
-    "mathematics"
-]
+REPRESENTATIVE_KEYWORDS = {
+    "Biomedical Science": [
+        "cancer",
+        "immunology",
+        "precision medicine",
+        "genomics"
+    ],
+
+    "Neuroscience": [
+        "neuroscience",
+        "memory",
+        "brain connectivity",
+        "cognitive neuroscience"
+    ],
+
+    "Public Health": [
+        "public health",
+        "epidemiology",
+        "health policy",
+        "global health"
+    ],
+
+    "Mental Health / Psychology": [
+        "psychology",
+        "depression",
+        "anxiety disorder",
+        "clinical psychology"
+    ],
+
+    "Sports & Exercise Science": [
+        "exercise physiology",
+        "sports medicine",
+        "biomechanics",
+        "sports nutrition"
+    ],
+
+    "Artificial Intelligence": [
+        "artificial intelligence",
+        "machine learning",
+        "deep learning",
+        "large language model"
+    ],
+
+    "Computing": [
+        "computer science",
+        "software engineering",
+        "database systems",
+        "human computer interaction"
+    ],
+
+    "Data Science / Statistics": [
+        "statistics",
+        "data science",
+        "bayesian statistics",
+        "statistical learning"
+    ],
+
+    "Engineering / Robotics": [
+        "robotics",
+        "control systems",
+        "materials engineering",
+        "signal processing"
+    ],
+
+    "Physics": [
+        "physics",
+        "quantum mechanics",
+        "astrophysics",
+        "fluid dynamics"
+    ],
+
+    "Chemistry": [
+        "chemistry",
+        "organic chemistry",
+        "biochemistry",
+        "medicinal chemistry"
+    ],
+
+    "Mathematics": [
+        "mathematics",
+        "linear algebra",
+        "differential equations",
+        "mathematical modeling"
+    ],
+
+    "Earth & Environment": [
+        "climate change",
+        "ecology",
+        "renewable energy",
+        "biodiversity"
+    ],
+
+    "Economics / Business": [
+        "economics",
+        "finance",
+        "behavioral economics",
+        "marketing"
+    ],
+
+    "Society / Policy": [
+        "political science",
+        "public policy",
+        "sociology",
+        "human rights"
+    ],
+
+    "Education": [
+        "education",
+        "learning science",
+        "educational technology",
+        "self-regulated learning"
+    ],
+
+    "Humanities / Ethics": [
+        "ethics",
+        "bioethics",
+        "history",
+        "media studies"
+    ]
+}
 
 DEFAULT_WEIGHT = 0.1
 SELECTED_WEIGHT = 1.0
@@ -372,43 +479,6 @@ def signup_submit(
 
     print("USER CREATED:", user_id, flush=True)
 
-    mapping_html = ""
-
-    for result in mapping_results:
-        input_text = result.get("input", "")
-        matched = result.get("matched")
-        reason = result.get("reason", "")
-
-        if matched:
-            mapping_html += f"""
-            <li style="margin-bottom:12px;">
-                <b>{input_text}</b>
-                → <span style="color:#2563eb;">{matched}</span>
-                <br>
-                <span style="font-size:13px; color:#666;">
-                    {reason}
-                </span>
-            </li>
-            """
-        else:
-            mapping_html += f"""
-            <li style="margin-bottom:12px;">
-                <b>{input_text}</b>
-                → <span style="color:#dc2626;">매칭 실패</span>
-                <br>
-                <span style="font-size:13px; color:#666;">
-                    {reason}
-                </span>
-            </li>
-            """
-
-    if not mapping_html:
-        mapping_html = """
-        <li style="margin-bottom:12px;">
-            선택되거나 매핑된 관심사가 없습니다.
-        </li>
-        """
-
     frequency_label = (
         "매일"
         if delivery_frequency == "daily"
@@ -452,11 +522,6 @@ def signup_submit(
                     추천 메일 주기:
                     <b>{frequency_label}</b>
                 </p>
-
-                <h3>반영된 관심사</h3>
-
-                <ul style="line-height:1.8;">
-                    {mapping_html}
                 </ul>
             </div>
         </body>

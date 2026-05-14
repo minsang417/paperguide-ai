@@ -1,9 +1,16 @@
 import os
 import time
+import argparse
 import requests
 from datetime import datetime, timedelta, timezone
 
 from dotenv import load_dotenv
+
+from config import (
+    OPENALEX_DAYS_BACK,
+    OPENALEX_MAX_RESULTS_PER_JOURNAL,
+    OPENALEX_PAGE_SIZE
+)
 
 from utils.file_io import load_json, save_json
 
@@ -15,9 +22,6 @@ RAW_PAPER_PATH = "data/papers/raw_papers.json"
 
 OPENALEX_EMAIL = os.getenv("OPENALEX_EMAIL", "")
 
-# 처음엔 OpenAlex source ID를 모르는 경우가 많아서 display_name.search로 찾는 방식보다
-# 여기서는 journal name 검색을 같이 쓴다.
-# 나중에 source ID를 확정하면 primary_location.source.id 필터로 바꾸면 더 정확해진다.
 TARGET_JOURNALS = [
     "Nature",
     "Nature Medicine",
@@ -36,11 +40,18 @@ TARGET_JOURNALS = [
     "New England Journal of Medicine"
 ]
 
-PAGE_SIZE = 50
-MAX_RESULTS_PER_JOURNAL = 100
+
+def normalize_limit(value):
+    if value is None:
+        return None
+
+    if int(value) <= 0:
+        return None
+
+    return int(value)
 
 
-def get_date_range(days_back: int = 7):
+def get_date_range(days_back: int):
     end_date = datetime.now(timezone.utc).date()
     start_date = end_date - timedelta(days=days_back)
 
@@ -143,6 +154,7 @@ def get_work_url(work):
 
 def work_to_paper(work, target_journal):
     title = work.get("display_name", "")
+
     abstract = reconstruct_abstract(
         work.get("abstract_inverted_index")
     )
@@ -178,7 +190,8 @@ def work_to_paper(work, target_journal):
         "openalex_source_id": get_source_id(work),
         "published_at": work.get("publication_date", ""),
         "doi": doi,
-        "cited_by_count": work.get("cited_by_count", 0)
+        "cited_by_count": work.get("cited_by_count", 0),
+        "collected_at": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -193,7 +206,9 @@ def build_filter(start_date, end_date):
 
 def fetch_journal_works(
     journal_name,
-    days_back: int = 7
+    days_back: int,
+    max_results: int | None,
+    page_size: int
 ):
     start_date, end_date = get_date_range(
         days_back
@@ -202,14 +217,19 @@ def fetch_journal_works(
     works = []
     page = 1
 
-    while len(works) < MAX_RESULTS_PER_JOURNAL:
+    print(
+        f"[OPENALEX] date range: "
+        f"{start_date} ~ {end_date}"
+    )
+
+    while True:
         params = {
             "search": journal_name,
             "filter": build_filter(
                 start_date,
                 end_date
             ),
-            "per-page": PAGE_SIZE,
+            "per-page": page_size,
             "page": page,
             "sort": "publication_date:desc"
         }
@@ -236,22 +256,42 @@ def fetch_journal_works(
         if not batch:
             break
 
+        added_this_page = 0
+
         for work in batch:
             source_name = get_source_name(work)
 
-            # search는 제목/초록까지 섞일 수 있어서 source journal 이름으로 한 번 더 필터링
             if source_name.lower() != journal_name.lower():
                 continue
 
             works.append(work)
+            added_this_page += 1
 
-            if len(works) >= MAX_RESULTS_PER_JOURNAL:
+            if (
+                max_results is not None
+                and len(works) >= max_results
+            ):
                 break
 
-        if len(batch) < PAGE_SIZE:
+        print(
+            f"[OPENALEX] {journal_name}: "
+            f"page={page}, "
+            f"batch={len(batch)}, "
+            f"accepted={added_this_page}, "
+            f"total={len(works)}"
+        )
+
+        if (
+            max_results is not None
+            and len(works) >= max_results
+        ):
+            break
+
+        if len(batch) < page_size:
             break
 
         page += 1
+
         time.sleep(0.2)
 
     return works
@@ -297,8 +337,23 @@ def merge_raw_papers(new_papers):
     return added, updated, len(merged)
 
 
-def collect_openalex_papers(days_back: int = 7):
+def collect_openalex_papers(
+    days_back: int = OPENALEX_DAYS_BACK,
+    max_results_per_journal: int | None = OPENALEX_MAX_RESULTS_PER_JOURNAL,
+    page_size: int = OPENALEX_PAGE_SIZE
+):
+    max_results_per_journal = normalize_limit(
+        max_results_per_journal
+    )
+
     all_papers = []
+
+    print(
+        f"[OPENALEX] settings: "
+        f"days_back={days_back}, "
+        f"max_results_per_journal={max_results_per_journal}, "
+        f"page_size={page_size}"
+    )
 
     for journal_name in TARGET_JOURNALS:
         print(
@@ -307,7 +362,9 @@ def collect_openalex_papers(days_back: int = 7):
 
         works = fetch_journal_works(
             journal_name,
-            days_back=days_back
+            days_back=days_back,
+            max_results=max_results_per_journal,
+            page_size=page_size
         )
 
         journal_papers = []
@@ -342,5 +399,38 @@ def collect_openalex_papers(days_back: int = 7):
     return all_papers
 
 
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=OPENALEX_DAYS_BACK,
+        help="How many days back to collect papers"
+    )
+
+    parser.add_argument(
+        "--max-per-journal",
+        type=int,
+        default=OPENALEX_MAX_RESULTS_PER_JOURNAL,
+        help="Maximum papers per journal. Use 0 for unlimited."
+    )
+
+    parser.add_argument(
+        "--page-size",
+        type=int,
+        default=OPENALEX_PAGE_SIZE,
+        help="OpenAlex API page size"
+    )
+
+    args = parser.parse_args()
+
+    collect_openalex_papers(
+        days_back=args.days,
+        max_results_per_journal=args.max_per_journal,
+        page_size=args.page_size
+    )
+
+
 if __name__ == "__main__":
-    collect_openalex_papers(days_back=7)
+    main()

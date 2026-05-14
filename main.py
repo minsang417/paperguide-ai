@@ -320,10 +320,10 @@ def main(delivery_frequency="weekly"):
             paper["paper_id"]
         )
 
-        if existing_processed is not None:
-            paper = existing_processed
-        else:
-            paper = process_new_paper(paper)
+        if existing_processed is None:
+            continue
+
+        paper = existing_processed
 
         processed_papers.append(paper)
         processed_by_id[paper["paper_id"]] = paper
