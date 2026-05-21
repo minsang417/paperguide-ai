@@ -49,16 +49,20 @@ def ensure_vector_indices():
 
 
 def get_keyword_to_index_map():
-    keywords = ensure_vector_indices()
+    keywords = load_canonical_keywords()
 
     result = {}
 
-    for item in keywords:
+    for fallback_index, item in enumerate(keywords):
         name = item.get("canonical_name")
+
+        if not name:
+            continue
+
         index = item.get("vector_index")
 
-        if name is None or index is None:
-            continue
+        if not isinstance(index, int):
+            index = fallback_index
 
         result[name] = index
 

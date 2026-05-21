@@ -7,79 +7,46 @@ from utils.json_db_store import (
 )
 
 
-def should_use_db(path: str):
-    normalized_path = path.replace("\\", "/")
-
-    return normalized_path.startswith("data/")
+LOCAL_ONLY_PREFIXES = [
+    "data/keywords/canonical_embeddings.json"
+]
 
 
 def load_json(path):
-    if should_use_db(path):
-        default = [] if path.endswith(".json") else None
-        data = load_json_document(path, default=default)
+    for prefix in LOCAL_ONLY_PREFIXES:
+        if path == prefix:
+            if not os.path.exists(path):
+                return {}
 
-        if data is None:
-            return []
+            with open(
+                path,
+                "r",
+                encoding="utf-8"
+            ) as f:
+                return json.load(f)
 
-        return data
-
-    if not os.path.exists(path):
-        return []
-
-    with open(
-        path,
-        "r",
-        encoding="utf-8"
-    ) as f:
-        return json.load(f)
+    return load_json_document(path)
 
 
 def save_json(path, data):
-    if should_use_db(path):
-        save_json_document(path, data)
-        return
-
-    folder = os.path.dirname(path)
-
-    if folder:
-        os.makedirs(
-            folder,
-            exist_ok=True
-        )
-
-    with open(
-        path,
-        "w",
-        encoding="utf-8"
-    ) as f:
-        json.dump(
-            data,
-            f,
-            ensure_ascii=False,
-            indent=2
-        )
-
-
-def save_or_update_paper(path, paper):
-    papers = load_json(path)
-
-    if not isinstance(papers, list):
-        papers = []
-
-    paper_id = paper.get("paper_id")
-
-    updated = False
-
-    for index, existing_paper in enumerate(papers):
-        if existing_paper.get("paper_id") == paper_id:
-            papers[index] = paper
-            updated = True
-            break
-
-    if not updated:
-        papers.append(paper)
-
-    save_json(
-        path,
-        papers
+    os.makedirs(
+        os.path.dirname(path),
+        exist_ok=True
     )
+
+    for prefix in LOCAL_ONLY_PREFIXES:
+        if path == prefix:
+            with open(
+                path,
+                "w",
+                encoding="utf-8"
+            ) as f:
+                json.dump(
+                    data,
+                    f,
+                    ensure_ascii=False,
+                    indent=2
+                )
+            return
+
+    save_json_document(path, data)

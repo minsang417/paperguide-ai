@@ -17,6 +17,7 @@ from config import (
 
 from utils.file_io import load_json, save_json
 
+from utils.raw_paper_store import upsert_raw_papers
 
 load_dotenv()
 
@@ -338,7 +339,7 @@ def collect_recent_pubmed_papers(
         f"papers with title+abstract: {len(papers)}"
     )
 
-    merge_raw_papers(
+    upsert_raw_papers(
         papers
     )
 

@@ -14,6 +14,7 @@ from config import (
 
 from utils.file_io import load_json, save_json
 
+from utils.raw_paper_store import upsert_raw_papers
 
 load_dotenv()
 
@@ -387,13 +388,13 @@ def collect_openalex_papers(
             journal_papers
         )
 
-    added, updated, total = merge_raw_papers(
+    upsert_raw_papers(
         all_papers
     )
 
     print(
         f"[OPENALEX] done. "
-        f"added={added}, updated={updated}, total_raw={total}"
+        f"upserted={len(all_papers)}"
     )
 
     return all_papers

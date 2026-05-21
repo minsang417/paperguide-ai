@@ -286,7 +286,6 @@ def ensure_insight_for_paper(
 
     return paper
 
-
 def main(delivery_frequency="weekly"):
     print("main started")
     print(f"delivery frequency: {delivery_frequency}")
@@ -301,32 +300,21 @@ def main(delivery_frequency="weekly"):
         print(f"no {delivery_frequency} users found")
         return
 
-    raw_papers = load_json(RAW_PAPER_PATH)
-
-    if not isinstance(raw_papers, list) or not raw_papers:
-        print("no raw papers found")
-        return
-
-    if MAX_PAPERS_TO_PROCESS is not None:
-        raw_papers = raw_papers[:MAX_PAPERS_TO_PROCESS]
-
     processed_paper_map = get_processed_paper_map()
 
-    processed_papers = []
-    processed_by_id = {}
+    processed_papers = list(
+        processed_paper_map.values()
+    )
 
-    for paper in raw_papers:
-        existing_processed = processed_paper_map.get(
-            paper["paper_id"]
-        )
+    if not processed_papers:
+        print("no processed papers found")
+        return
 
-        if existing_processed is None:
-            continue
-
-        paper = existing_processed
-
-        processed_papers.append(paper)
-        processed_by_id[paper["paper_id"]] = paper
+    processed_by_id = {
+        paper["paper_id"]: paper
+        for paper in processed_papers
+        if paper.get("paper_id")
+    }
 
     user_score_map = {}
     all_selected_paper_ids = set()
@@ -417,7 +405,6 @@ def main(delivery_frequency="weekly"):
                 "feedback is enabled, but batch feedback "
                 "is not implemented in multi-user mode."
             )
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

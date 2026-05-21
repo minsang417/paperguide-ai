@@ -1,74 +1,74 @@
 from config import MAX_PAPERS_TO_PROCESS
 
-from utils.file_io import load_json
+from main import process_new_paper
 
-from main import (
-    RAW_PAPER_PATH,
-    get_processed_paper_map,
-    process_new_paper
-)
+from utils.supabase_client import supabase
+
+import traceback
+
+def fetch_unprocessed_raw(limit):
+    response = (
+        supabase.table("raw_papers")
+        .select("*")
+        .eq("processed", False)
+        .limit(limit)
+        .execute()
+    )
+
+    return response.data or []
 
 
-def daily_ingest():
+def mark_processed(paper_id):
+    (
+        supabase.table("raw_papers")
+        .update({
+            "processed": True
+        })
+        .eq("paper_id", paper_id)
+        .execute()
+    )
+
+
+def main():
     print("daily ingest started")
 
-    raw_papers = load_json(RAW_PAPER_PATH)
+    limit = MAX_PAPERS_TO_PROCESS or 300
 
-    if not isinstance(raw_papers, list) or not raw_papers:
-        print("no raw papers found")
-        return
+    raw_papers = fetch_unprocessed_raw(
+        limit
+    )
 
-    processed_paper_map = get_processed_paper_map()
-
-    candidate_papers = []
-
-    for paper in raw_papers:
-        paper_id = paper.get("paper_id")
-
-        if not paper_id:
-            continue
-
-        existing_processed = processed_paper_map.get(
-            paper_id
-        )
-
-        if existing_processed is not None:
-            continue
-
-        candidate_papers.append(paper)
-
-    total_candidates = len(candidate_papers)
-
-    if MAX_PAPERS_TO_PROCESS is not None:
-        candidate_papers = candidate_papers[
-            :MAX_PAPERS_TO_PROCESS
-        ]
+    print(
+        f"fetched raw papers: {len(raw_papers)}"
+    )
 
     processed_count = 0
     failed_count = 0
 
-    for paper in candidate_papers:
+    for raw in raw_papers:
         try:
-            process_new_paper(paper)
+            process_new_paper(
+                raw
+            )
+
+            mark_processed(
+                raw["paper_id"]
+            )
+
             processed_count += 1
 
         except Exception as e:
+            print(
+                f"[FAILED] {raw['paper_id']}: {repr(e)}"
+            )
+            traceback.print_exc()
             failed_count += 1
 
-            print(
-                f"[DAILY INGEST ERROR] "
-                f"paper_id={paper.get('paper_id')} "
-                f"error={repr(e)}"
-            )
-
-    skipped_count = len(raw_papers) - total_candidates
-
-    print(f"raw papers: {len(raw_papers)}")
-    print(f"unprocessed candidates: {total_candidates}")
-    print(f"processed this run: {processed_count}")
-    print(f"failed this run: {failed_count}")
-    print(f"already processed skipped: {skipped_count}")
+    print(
+        f"processed={processed_count}, "
+        f"failed={failed_count}"
+    )
 
 
 if __name__ == "__main__":
-    daily_ingest()
+    main()
