@@ -23,9 +23,11 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-      - env:
+      - name: Collect PubMed papers and run ingest
+        env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           SENDER_APP_PASSWORD: ${{ secrets.SENDER_APP_PASSWORD }}
           FEEDBACK_SECRET_KEY: ${{ secrets.FEEDBACK_SECRET_KEY }}
@@ -33,8 +35,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          NCBI_EMAIL: ${{ secrets.NCBI_EMAIL }}
+          NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
         run: |
-          run: |
-            python -m collectors.paper_collector
-            python -m collectors.openalex_collector
-            python -m scripts.daily_ingest
+          python -m collectors.paper_collector --days 1 --max-total 30
+          python -m scripts.daily_ingest
