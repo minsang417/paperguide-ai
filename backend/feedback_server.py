@@ -642,3 +642,7 @@ def unsubscribe(token: str):
         </body>
     </html>
     """)
+
+@app.get("/health")
+def health():
+    return {"status": "ok"}
