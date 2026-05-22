@@ -6,11 +6,11 @@ from utils.json_db_store import (
     save_json_document
 )
 
-
 LOCAL_ONLY_PREFIXES = [
-    "data/keywords/canonical_embeddings.json"
+    "data/keywords/canonical_embeddings.json",
+    "data/keywords/candidate_keywords.json",
+    "data/keywords/review_log.json",
 ]
-
 
 def load_json(path):
     for prefix in LOCAL_ONLY_PREFIXES:
